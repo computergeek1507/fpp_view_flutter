@@ -39,6 +39,10 @@ class DeviceManager extends ChangeNotifier {
 
   bool get scanning => _scanning;
 
+  /// Whether this platform supports zero-config UDP/mDNS discovery. False on
+  /// web, where only manual-IP add + HTTP polling are available.
+  bool get supportsNetworkDiscovery => discovery.supportsNetworkDiscovery;
+
   Future<void> init() async {
     _discoverySub = discovery.devices.listen(_onDeviceFound);
     final prefs = await SharedPreferences.getInstance();

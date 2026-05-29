@@ -52,20 +52,45 @@ class DeviceListPage extends StatelessWidget {
         animation: manager,
         builder: (context, _) {
           final devices = manager.devices;
-          if (devices.isEmpty) {
-            return _EmptyState(scanning: manager.scanning, onScan: manager.scan);
-          }
-          return RefreshIndicator(
-            onRefresh: manager.scan,
-            child: ListView.separated(
-              itemCount: devices.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, i) => _DeviceTile(
-                device: devices[i],
-                onTap: () => _openDetail(context, devices[i]),
-                onRemove: () => manager.removeDevice(devices[i].ip),
+          return Column(
+            children: [
+              if (!manager.supportsNetworkDiscovery)
+                MaterialBanner(
+                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  leading: const Icon(Icons.info_outline),
+                  content: const Text(
+                    'Automatic discovery (UDP/mDNS) is not available in the browser. '
+                    'Add devices manually by IP using the + button.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => _showAddDialog(context),
+                      child: const Text('Add device'),
+                    ),
+                  ],
+                ),
+              Expanded(
+                child: devices.isEmpty
+                    ? _EmptyState(
+                        scanning: manager.scanning,
+                        canScan: manager.supportsNetworkDiscovery,
+                        onScan: manager.scan,
+                        onAdd: () => _showAddDialog(context),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: manager.scan,
+                        child: ListView.separated(
+                          itemCount: devices.length,
+                          separatorBuilder: (_, _) => const Divider(height: 1),
+                          itemBuilder: (context, i) => _DeviceTile(
+                            device: devices[i],
+                            onTap: () => _openDetail(context, devices[i]),
+                            onRemove: () => manager.removeDevice(devices[i].ip),
+                          ),
+                        ),
+                      ),
               ),
-            ),
+            ],
           );
         },
       ),
@@ -243,8 +268,15 @@ class _PlaybackLine extends StatelessWidget {
 
 class _EmptyState extends StatelessWidget {
   final bool scanning;
+  final bool canScan;
   final VoidCallback onScan;
-  const _EmptyState({required this.scanning, required this.onScan});
+  final VoidCallback onAdd;
+  const _EmptyState({
+    required this.scanning,
+    required this.canScan,
+    required this.onScan,
+    required this.onAdd,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -254,13 +286,21 @@ class _EmptyState extends StatelessWidget {
         children: [
           Icon(Icons.lightbulb_outline, size: 64, color: Theme.of(context).disabledColor),
           const SizedBox(height: 16),
-          Text(scanning ? 'Scanning for FPP devices…' : 'No FPP devices found yet'),
+          Text(scanning
+              ? 'Scanning for FPP devices…'
+              : (canScan ? 'No FPP devices found yet' : 'Add an FPP device by IP to get started')),
           const SizedBox(height: 16),
-          if (!scanning)
+          if (!scanning && canScan)
             FilledButton.icon(
               onPressed: onScan,
               icon: const Icon(Icons.search),
               label: const Text('Scan network'),
+            ),
+          if (!canScan)
+            FilledButton.icon(
+              onPressed: onAdd,
+              icon: const Icon(Icons.add),
+              label: const Text('Add device by IP'),
             ),
         ],
       ),

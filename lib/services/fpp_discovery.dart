@@ -1,101 +1,59 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:multicast_dns/multicast_dns.dart';
-
 import '../models/fpp_device.dart';
+import 'discovery_transport.dart';
 import 'fpp_api.dart';
-
-/// FPP MultiSync control protocol constants.
-const String _kFppMulticastAddr = '239.70.80.80';
-const int _kFppCtrlPort = 32320;
-const String _kFppMdnsService = '_fppd._udp';
 
 /// Discovers FPP devices via the native MultiSync UDP ping, mDNS, and by
 /// pulling the peer list from any device that answers. Emits [FppDevice]
 /// objects as they are found; the caller is responsible for merge/dedupe.
+///
+/// The actual socket work is delegated to a [DiscoveryTransport] that is
+/// platform-split: native sockets on desktop/mobile, a no-op on web. On web,
+/// only manual-IP add + HTTP enrichment function.
 class FppDiscovery {
   final FppApi api;
+  final DiscoveryTransport _transport;
+  bool _started = false;
 
-  RawDatagramSocket? _socket;
-  StreamSubscription? _socketSub;
   final _controller = StreamController<FppDevice>.broadcast();
 
   /// Tracks IPs we've already kicked an HTTP enrichment for this session, to
   /// avoid hammering the same device on every repeated ping.
   final Set<String> _enriched = {};
 
-  FppDiscovery({FppApi? api}) : api = api ?? FppApi();
+  FppDiscovery({FppApi? api, DiscoveryTransport? transport})
+      : api = api ?? FppApi(),
+        _transport = transport ?? DiscoveryTransport();
 
   Stream<FppDevice> get devices => _controller.stream;
 
-  /// Run one discovery sweep: open the UDP listener, send the ping three ways,
-  /// kick off mDNS, and keep listening for [listenFor]. Safe to call repeatedly.
+  /// Whether this platform can do zero-config UDP/mDNS discovery.
+  bool get supportsNetworkDiscovery => _transport.supportsNetworkDiscovery;
+
+  /// Run one discovery sweep: ensure the listener is up, send the ping, and
+  /// kick off mDNS. Safe to call repeatedly. No-op transport on web.
   Future<void> discover({Duration listenFor = const Duration(seconds: 5)}) async {
-    await _ensureSocket();
-    _sendPing();
-    _runMdns(listenFor);
-    // The socket keeps receiving responses in the background via _socketSub.
+    if (!_started) {
+      await _transport.start(
+        onPacket: _handlePacket,
+        onMdnsHost: _onMdnsHost,
+      );
+      _started = true;
+    }
+    _transport.sendBroadcastPing(_buildDiscoveryPing());
+    _transport.browseMdns(listenFor);
   }
 
-  Future<void> _ensureSocket() async {
-    if (_socket != null) return;
-    try {
-      final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, _kFppCtrlPort,
-          reuseAddress: true, reusePort: false);
-      socket.broadcastEnabled = true;
-      socket.readEventsEnabled = true;
-      try {
-        socket.joinMulticast(InternetAddress(_kFppMulticastAddr));
-      } catch (_) {/* some interfaces reject join; broadcast still works */}
-      _socket = socket;
-      _socketSub = socket.listen((event) {
-        if (event == RawSocketEvent.read) {
-          final dg = socket.receive();
-          if (dg != null) _handlePacket(dg.data);
-        }
-      });
-    } on SocketException {
-      // Port busy (another FPP/xLights tool on this host). Bind ephemeral so we
-      // can still send pings and receive unicast replies, just not the group.
-      final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
-      socket.broadcastEnabled = true;
-      _socket = socket;
-      _socketSub = socket.listen((event) {
-        if (event == RawSocketEvent.read) {
-          final dg = socket.receive();
-          if (dg != null) _handlePacket(dg.data);
-        }
-      });
+  void _onMdnsHost(String ip) {
+    if (!_enriched.contains(ip)) {
+      _enriched.add(ip);
+      unawaited(enrichAndPullPeers(ip));
     }
   }
 
-  /// Build and send the 207-byte v2 discovery ping (see xLights FPP.cpp).
-  void _sendPing() {
-    final socket = _socket;
-    if (socket == null) return;
-    final pkt = _buildDiscoveryPing();
-    final targets = <InternetAddress>[
-      InternetAddress(_kFppMulticastAddr),
-      InternetAddress('255.255.255.255'),
-    ];
-    for (final addr in targets) {
-      try {
-        socket.send(pkt, addr, _kFppCtrlPort);
-      } catch (_) {/* interface may not support this target */}
-    }
-  }
-
-  /// Unicast a ping to a specific host (used for manual add / known IPs).
-  void pingHost(String ip) {
-    final socket = _socket;
-    if (socket == null) return;
-    try {
-      socket.send(_buildDiscoveryPing(), InternetAddress(ip), _kFppCtrlPort);
-    } catch (_) {}
-  }
-
+  /// Build the 207-byte v2 discovery ping (see xLights FPP.cpp).
   static Uint8List _buildDiscoveryPing() {
     final b = Uint8List(207);
     b[0] = 0x46; // 'F'
@@ -195,59 +153,18 @@ class FppDiscovery {
     }
   }
 
-  /// Manually add a host by IP/hostname: ping it and probe over HTTP.
+  /// Manually add a host by IP/hostname: ping it (native) and probe over HTTP.
   Future<void> addManual(String host) async {
-    pingHost(host);
+    _transport.sendUnicastPing(_buildDiscoveryPing(), host);
     _enriched.add(host);
     await enrichAndPullPeers(host);
-  }
-
-  void _runMdns(Duration timeout) {
-    // mDNS is a best-effort, supplementary path. On Windows the multicast join
-    // on 0.0.0.0:5353 can fail asynchronously (errno 1232) from inside the
-    // client's socket listener, which a plain try/catch around start() cannot
-    // catch. runZonedGuarded contains any such uncaught async error so it can
-    // never crash the app; UDP ping + broadcast + peer-pull remain the primary
-    // discovery paths.
-    runZonedGuarded(() async {
-      // The default socket factory binds with reusePort:true, which Windows
-      // rejects outright. Force reusePort:false so the bind succeeds.
-      final client = MDnsClient(
-        rawDatagramSocketFactory: (dynamic host, int port,
-            {bool reuseAddress = true, bool reusePort = true, int ttl = 1}) {
-          return RawDatagramSocket.bind(host, port,
-              reuseAddress: reuseAddress, reusePort: false, ttl: ttl);
-        },
-      );
-      try {
-        await client.start();
-        await for (final ptr in client
-            .lookup<PtrResourceRecord>(ResourceRecordQuery.serverPointer(_kFppMdnsService))
-            .timeout(timeout, onTimeout: (sink) => sink.close())) {
-          await for (final srv in client.lookup<SrvResourceRecord>(
-              ResourceRecordQuery.service(ptr.domainName))) {
-            await for (final ip in client.lookup<IPAddressResourceRecord>(
-                ResourceRecordQuery.addressIPv4(srv.target))) {
-              final addr = ip.address.address;
-              if (!_enriched.contains(addr)) {
-                _enriched.add(addr);
-                unawaited(enrichAndPullPeers(addr));
-              }
-            }
-          }
-        }
-      } catch (_) {/* mDNS unavailable on this network/platform */} finally {
-        client.stop();
-      }
-    }, (error, stack) {/* swallow async mDNS socket errors (e.g. Windows errno 1232) */});
   }
 
   /// Clear the per-session enrichment cache so a fresh scan re-probes peers.
   void resetEnrichmentCache() => _enriched.clear();
 
   void dispose() {
-    _socketSub?.cancel();
-    _socket?.close();
+    _transport.dispose();
     _controller.close();
   }
 }
