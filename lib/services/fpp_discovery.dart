@@ -101,6 +101,7 @@ class FppDiscovery {
     d.hostname = _cString(data, 19, 65);
     d.version = _cString(data, 84, 41);
     if (data.length > 125) d.platform = _cString(data, 125, 41);
+    d.refreshVendor();
 
     _controller.add(d);
 

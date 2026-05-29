@@ -3,7 +3,10 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/controller_vendor.dart';
 import '../models/fpp_device.dart';
+import 'controllers/controller_client.dart';
+import 'controllers/controller_factory.dart';
 import 'fpp_api.dart';
 import 'fpp_discovery.dart';
 
@@ -94,12 +97,15 @@ class DeviceManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Enable/disable the RGB-chase test on every reachable FPP device at once
-  /// (ports the POC's "Start/Stop Testing All").
+  /// Enable/disable test mode on every controller at once, each via its own
+  /// vendor client (FPP, Falcon V3/V4, Genius, WLED).
   Future<int> setTestAll(bool enabled) async {
-    final targets = _devices.values.where((d) => d.isFppDevice).toList();
+    final targets = _devices.values
+        .map((d) => controllerClientFor(d, fppApi: api))
+        .whereType<ControllerClient>()
+        .toList();
     final results = await Future.wait(
-      targets.map((d) => api.setTestMode(d.ip, enabled: enabled)),
+      targets.map((c) => enabled ? c.testOn() : c.testOff()),
     );
     await refreshAllStatus();
     return results.where((ok) => ok).length;
@@ -117,11 +123,33 @@ class DeviceManager extends ChangeNotifier {
 
   Future<void> _refreshStatus(FppDevice d) async {
     if (d.ip.isEmpty) return;
-    final status = await api.systemStatus(d.ip, majorVersion: d.majorVersion);
-    if (status != null) {
-      d.applyStatus(status);
-    } else {
+    // FPP players keep the rich playback status path; other vendors poll via
+    // their controller client and map the normalized snapshot onto the device.
+    if (d.vendor == ControllerVendor.fpp || d.vendor == ControllerVendor.unknown) {
+      final status = await api.systemStatus(d.ip, majorVersion: d.majorVersion);
+      if (status != null) {
+        d.applyStatus(status);
+      } else {
+        d.reachable = false;
+      }
+      return;
+    }
+    final client = controllerClientFor(d, fppApi: api);
+    if (client == null) {
       d.reachable = false;
+      return;
+    }
+    final s = await client.fetchStatus();
+    d.reachable = s.reachable;
+    if (s.reachable) {
+      d.inTestMode = s.inTestMode;
+      if (s.firmware.isNotEmpty) d.version = s.firmware;
+      if (s.mode.isNotEmpty) d.mode = s.mode;
+      if (s.model.isNotEmpty && d.hostname.isEmpty) d.hostname = s.model;
+      if (s.portCount > 0) d.portCount = s.portCount;
+      if (s.extra.isNotEmpty) d.extra = s.extra;
+      d.statusName = (s.inTestMode == true) ? 'testing' : 'online';
+      d.lastSeen = DateTime.now();
     }
   }
 
@@ -130,6 +158,9 @@ class DeviceManager extends ChangeNotifier {
     await _refreshStatus(d);
     notifyListeners();
   }
+
+  /// Get the vendor-appropriate control client for a device (null if unknown).
+  ControllerClient? clientFor(FppDevice d) => controllerClientFor(d, fppApi: api);
 
   void _startStatusPolling() {
     _statusTimer?.cancel();

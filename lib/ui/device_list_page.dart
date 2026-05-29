@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../models/controller_vendor.dart';
 import '../models/fpp_device.dart';
 import '../services/device_manager.dart';
+import 'controller_detail_page.dart';
 import 'device_detail_page.dart';
 
 class DeviceListPage extends StatelessWidget {
@@ -116,9 +118,15 @@ class DeviceListPage extends StatelessWidget {
   }
 
   void _openDetail(BuildContext context, FppDevice device) {
+    // FPP players get the full playback control page; pixel controllers
+    // (Falcon/Genius/WLED) get the monitor + test + outputs page.
+    final isFpp = device.vendor == ControllerVendor.fpp ||
+        device.vendor == ControllerVendor.unknown;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => DeviceDetailPage(manager: manager, device: device),
+        builder: (_) => isFpp
+            ? DeviceDetailPage(manager: manager, device: device)
+            : ControllerDetailPage(manager: manager, device: device),
       ),
     );
   }
@@ -153,6 +161,36 @@ class DeviceListPage extends StatelessWidget {
   }
 }
 
+class _VendorBadge extends StatelessWidget {
+  final ControllerVendor vendor;
+  const _VendorBadge({required this.vendor});
+
+  static const _colors = {
+    ControllerVendor.fpp: Color(0xFF1565C0),
+    ControllerVendor.falconV3: Color(0xFF6A1B9A),
+    ControllerVendor.falconV4: Color(0xFF8E24AA),
+    ControllerVendor.genius: Color(0xFF2E7D32),
+    ControllerVendor.wled: Color(0xFFEF6C00),
+    ControllerVendor.unknown: Color(0xFF546E7A),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    if (vendor == ControllerVendor.unknown) return const SizedBox.shrink();
+    final color = _colors[vendor] ?? const Color(0xFF546E7A);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.22),
+        border: Border.all(color: color.withValues(alpha: 0.6)),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(vendor.label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color)),
+    );
+  }
+}
+
 class _DeviceTile extends StatelessWidget {
   final FppDevice device;
   final VoidCallback onTap;
@@ -169,7 +207,9 @@ class _DeviceTile extends StatelessWidget {
       title: Row(
         children: [
           Expanded(child: Text(title, style: theme.textTheme.titleMedium)),
-          if (device.prettyVersion.isNotEmpty)
+          _VendorBadge(vendor: device.vendor),
+          if (device.prettyVersion.isNotEmpty) ...[
+            const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
@@ -178,6 +218,7 @@ class _DeviceTile extends StatelessWidget {
               ),
               child: Text('v${device.prettyVersion}', style: theme.textTheme.labelSmall),
             ),
+          ],
         ],
       ),
       subtitle: Column(

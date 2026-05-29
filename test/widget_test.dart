@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fpp_view/models/controller_vendor.dart';
 import 'package:fpp_view/models/fpp_device.dart';
 
 /// Build a synthetic FPPD ping (0x04) response packet for parse testing.
@@ -135,6 +136,35 @@ void main() {
       expect(FppDevice.decodeIpList(encoded), ips);
       expect(FppDevice.decodeIpList(''), isEmpty);
       expect(FppDevice.decodeIpList(null), isEmpty);
+    });
+  });
+
+  group('controller vendor classification', () {
+    test('maps MultiSync typeId to vendor (per FPP controller plugin)', () {
+      expect(vendorFromTypeId(0x01), ControllerVendor.fpp);
+      expect(vendorFromTypeId(0x7F), ControllerVendor.fpp);
+      expect(vendorFromTypeId(0x85), ControllerVendor.falconV3);
+      expect(vendorFromTypeId(0x87), ControllerVendor.falconV3);
+      expect(vendorFromTypeId(0x88), ControllerVendor.falconV4);
+      expect(vendorFromTypeId(0x89), ControllerVendor.falconV4);
+      expect(vendorFromTypeId(0xA0), ControllerVendor.genius);
+      expect(vendorFromTypeId(0xAF), ControllerVendor.genius);
+      expect(vendorFromTypeId(0xFB), ControllerVendor.wled);
+      expect(vendorFromTypeId(0x00), ControllerVendor.unknown);
+      expect(vendorFromTypeId(0x90), ControllerVendor.unknown);
+    });
+
+    test('device refreshVendor classifies from typeId', () {
+      final falcon = FppDevice(ip: '192.168.1.60', typeId: 0x88)..refreshVendor();
+      expect(falcon.vendor, ControllerVendor.falconV4);
+      final genius = FppDevice(ip: '192.168.1.61', typeId: 0xA1)..refreshVendor();
+      expect(genius.vendor, ControllerVendor.genius);
+    });
+
+    test('falls back to platform when typeId is absent', () {
+      expect(vendorFromPlatform('Raspberry Pi 4'), ControllerVendor.fpp);
+      expect(vendorFromPlatform('BeagleBone Black'), ControllerVendor.fpp);
+      expect(vendorFromPlatform('something else'), ControllerVendor.unknown);
     });
   });
 }

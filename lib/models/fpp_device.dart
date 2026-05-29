@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'controller_vendor.dart';
+
 /// A discovered Falcon Player (FPP) instance and its last-known playback status.
 ///
 /// Field population is version-aware: `/api/system/info` (FPP 2+) and the
@@ -21,6 +23,19 @@ class FppDevice {
 
   /// How this device was found, for display/debugging.
   String discoverySource;
+
+  /// Vendor/controller family (FPP, Falcon, Genius, WLED), classified from the
+  /// MultiSync ping typeId or HTTP identity. Defaults to unknown until set.
+  ControllerVendor vendor;
+
+  /// Live test-mode state for non-FPP controllers (null = unknown/not polled).
+  bool? inTestMode;
+
+  /// Output/port count reported by a controller (0 = unknown).
+  int portCount;
+
+  /// Vendor-specific status extras (temps, voltages, port breakdown).
+  Map<String, String> extra;
 
   // Live playback status (from /api/system/status).
   String statusName;
@@ -44,6 +59,10 @@ class FppDevice {
     this.minorVersion = -1,
     this.typeId = 0,
     this.discoverySource = '',
+    this.vendor = ControllerVendor.unknown,
+    this.inTestMode,
+    this.portCount = 0,
+    this.extra = const {},
     this.statusName = '',
     this.currentPlaylist = '',
     this.currentSequence = '',
@@ -86,6 +105,19 @@ class FppDevice {
     if (other.minorVersion >= 0) minorVersion = other.minorVersion;
     if (other.typeId != 0) typeId = other.typeId;
     if (other.discoverySource.isNotEmpty) discoverySource = other.discoverySource;
+    if (other.vendor != ControllerVendor.unknown) vendor = other.vendor;
+    refreshVendor();
+  }
+
+  /// (Re)classify [vendor] from typeId, then platform, if still unknown.
+  void refreshVendor() {
+    if (vendor != ControllerVendor.unknown) return;
+    if (typeId != 0) {
+      vendor = vendorFromTypeId(typeId);
+    }
+    if (vendor == ControllerVendor.unknown && platform.isNotEmpty) {
+      vendor = vendorFromPlatform(platform, typeId: typeId);
+    }
   }
 
   /// Build from `/api/system/info` JSON (or legacy getSysInfo).
@@ -107,6 +139,7 @@ class FppDevice {
     } else if (json['IPs'] is List && (json['IPs'] as List).isNotEmpty) {
       d.ip = (json['IPs'] as List).first.toString();
     }
+    d.refreshVendor();
     return d;
   }
 
