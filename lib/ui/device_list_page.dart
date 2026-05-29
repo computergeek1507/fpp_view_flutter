@@ -61,7 +61,6 @@ class DeviceListPage extends StatelessWidget {
                   backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                   leading: const Icon(Icons.info_outline),
                   content: const Text(
-                    'Automatic discovery (UDP/mDNS) is not available in the browser. '
                     'Add devices manually by IP using the + button.',
                   ),
                   actions: [
