@@ -4,7 +4,13 @@ A cross-platform Flutter app to discover and control [Falcon Player (FPP)](https
 
 Runs on Windows, Android, iOS, macOS, and Linux.
 
-**Try it in your browser:** [computergeek1507.github.io/fpp_view_flutter](https://computergeek1507.github.io/fpp_view_flutter/) — note that the web build cannot run zero-config discovery (browsers can't open the raw UDP/mDNS sockets it requires), so add devices manually by hostname/IP.
+**Try it in your browser:** [computergeek1507.github.io/fpp_view_flutter](https://computergeek1507.github.io/fpp_view_flutter/)
+
+> ⚠️ **The web build has major limitations** — for full functionality, use the native desktop or mobile build instead.
+>
+> - **Use Microsoft Edge.** The web build is currently only known to work in Edge; other browsers (Chrome, Firefox, Safari) block the requests it makes to FPP devices.
+> - **No auto-discovery.** Browsers can't open the raw UDP/mDNS sockets discovery requires, so you must add every device manually by hostname/IP.
+> - **CORS / mixed content.** FPP devices serve plain HTTP and don't send CORS headers, so browsers may block the app from reading their responses — devices can silently fail to come online. This can't be fixed in the app; it requires enabling CORS on the FPP device or running a local proxy.
 
 ## Features
 
