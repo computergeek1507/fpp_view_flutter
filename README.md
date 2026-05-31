@@ -2,7 +2,9 @@
 
 A cross-platform Flutter app to discover and control [Falcon Player (FPP)](https://github.com/FalconChristmas/fpp) devices on the local network.
 
-Runs on Windows, Android, iOS, macOS, and Linux. (Web is not supported — browsers cannot open the raw UDP/mDNS sockets discovery requires.)
+Runs on Windows, Android, iOS, macOS, and Linux.
+
+**Try it in your browser:** [computergeek1507.github.io/fpp_view_flutter](https://computergeek1507.github.io/fpp_view_flutter/) — note that the web build cannot run zero-config discovery (browsers can't open the raw UDP/mDNS sockets it requires), so add devices manually by hostname/IP.
 
 ## Features
 
