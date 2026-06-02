@@ -33,7 +33,7 @@ class _FppControlAppState extends State<FppControlApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'FPP Control',
+      title: 'Controller Viewer',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(

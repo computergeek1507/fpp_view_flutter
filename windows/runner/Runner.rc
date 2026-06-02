@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.scott" "\0"
-            VALUE "FileDescription", "FPP View" "\0"
+            VALUE "FileDescription", "Controller Viewer" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "fpp_view" "\0"
+            VALUE "InternalName", "controller_viewer" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.scott. All rights reserved." "\0"
-            VALUE "OriginalFilename", "fpp_view.exe" "\0"
-            VALUE "ProductName", "FPP View" "\0"
+            VALUE "OriginalFilename", "controller_viewer.exe" "\0"
+            VALUE "ProductName", "Controller Viewer" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

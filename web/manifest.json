@@ -1,6 +1,6 @@
 {
-    "name": "fpp_view",
-    "short_name": "fpp_view",
+    "name": "Controller Viewer",
+    "short_name": "Controller Viewer",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0D1B3E",

@@ -1,4 +1,4 @@
-package com.scott.fpp_view
+package com.scott.controller_viewer
 
 import io.flutter.embedding.android.FlutterActivity
 

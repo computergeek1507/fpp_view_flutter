@@ -1,4 +1,4 @@
-# FPP View
+# Controller Viewer
 
 A cross-platform Flutter app to discover and control [Falcon Player (FPP)](https://github.com/FalconChristmas/fpp) devices on the local network.
 

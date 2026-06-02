@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fpp_view/models/controller_vendor.dart';
-import 'package:fpp_view/models/fpp_device.dart';
+import 'package:controller_viewer/models/controller_vendor.dart';
+import 'package:controller_viewer/models/fpp_device.dart';
 
 /// Build a synthetic FPPD ping (0x04) response packet for parse testing.
 Uint8List _pingPacket({
