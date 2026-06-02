@@ -14,7 +14,7 @@ class DeviceListPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('FPP Devices'),
+        title: const Text('Controllers'),
         actions: [
           AnimatedBuilder(
             animation: manager,
@@ -135,7 +135,7 @@ class DeviceListPage extends StatelessWidget {
     final host = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Add FPP Device'),
+        title: const Text('Add Controller'),
         content: TextField(
           controller: controller,
           autofocus: true,
