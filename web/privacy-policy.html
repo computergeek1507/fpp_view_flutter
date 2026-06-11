@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy Policy — Controller Viewer</title>
+  <style>
+    :root { --blue: #1565C0; --navy: #0D1B3E; --ink: #1a2230; --muted: #5a6675; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--ink); line-height: 1.65; background: #f4f6fa;
+    }
+    header {
+      background: linear-gradient(160deg, var(--blue), var(--navy));
+      color: #fff; padding: 48px 24px 40px;
+    }
+    header .wrap { max-width: 760px; margin: 0 auto; }
+    header h1 { margin: 0 0 6px; font-size: 1.9rem; }
+    header p { margin: 0; opacity: .85; }
+    main { max-width: 760px; margin: 0 auto; padding: 32px 24px 64px; }
+    h2 { margin-top: 2em; font-size: 1.2rem; color: var(--navy); }
+    a { color: var(--blue); }
+    ul { padding-left: 1.2em; }
+    .card {
+      background: #fff; border: 1px solid #e3e8f0; border-radius: 12px;
+      padding: 20px 24px; margin: 24px 0; box-shadow: 0 1px 3px rgba(20,40,80,.05);
+    }
+    .tldr { border-left: 4px solid var(--blue); }
+    footer { color: var(--muted); font-size: .9rem; border-top: 1px solid #e3e8f0; margin-top: 40px; padding-top: 20px; }
+    code { background: #eef1f6; padding: 1px 6px; border-radius: 4px; font-size: .9em; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>Privacy Policy</h1>
+      <p>Controller Viewer &middot; Effective June 11, 2026</p>
+    </div>
+  </header>
+  <main>
+    <div class="card tldr">
+      <strong>In short:</strong> Controller Viewer does not collect, transmit, or sell any
+      personal data. It has no accounts, no analytics, and no advertising. Everything it
+      stores stays on your device, and it only talks to the Falcon Player (FPP) controllers
+      on your own local network.
+    </div>
+
+    <p>
+      This Privacy Policy explains how the <strong>Controller Viewer</strong> application
+      (the &ldquo;App&rdquo;) handles information. The App lets you discover and control
+      <a href="https://github.com/FalconChristmas/fpp" rel="noopener">Falcon Player (FPP)</a>
+      devices on your local network.
+    </p>
+
+    <h2>Information we collect</h2>
+    <p>
+      <strong>None.</strong> The App does not collect, transmit, or share any personal or
+      sensitive user data with the developer or any third party. There are no user accounts,
+      no sign-in, no analytics or tracking SDKs, no crash reporting, and no advertising.
+    </p>
+
+    <h2>Information stored on your device</h2>
+    <p>The App saves a small amount of data <em>locally on your device only</em>, so it can remember your setup between launches:</p>
+    <ul>
+      <li>The list of FPP controllers you add or discover (such as their hostnames or IP addresses) and related display preferences.</li>
+    </ul>
+    <p>
+      This data never leaves your device and is not sent to us or anyone else. You can erase
+      it at any time by clearing the App&rsquo;s storage or uninstalling the App.
+    </p>
+
+    <h2>Network access</h2>
+    <p>The App communicates only with devices on your local network in order to function:</p>
+    <ul>
+      <li><strong>Discovery</strong> — it uses local multicast/mDNS to find FPP controllers on the same network.</li>
+      <li><strong>Control &amp; status</strong> — it sends HTTP requests directly to the FPP controllers you choose, to read their status and send commands.</li>
+    </ul>
+    <p>
+      These requests go straight to your controllers on your local network. The App does not
+      route your data through any server operated by the developer.
+    </p>
+
+    <h2>Permissions</h2>
+    <p>On Android, the App requests only the permissions needed for local-network communication:</p>
+    <ul>
+      <li><code>INTERNET</code> and <code>ACCESS_NETWORK_STATE</code> — to send requests to controllers and detect connectivity.</li>
+      <li><code>ACCESS_WIFI_STATE</code> and <code>CHANGE_WIFI_MULTICAST_STATE</code> — to discover controllers via multicast on Wi-Fi.</li>
+    </ul>
+    <p>The App does not request access to location, contacts, camera, microphone, photos, or files.</p>
+
+    <h2>Children&rsquo;s privacy</h2>
+    <p>
+      The App is a utility for managing lighting controllers and is not directed at children
+      under 13. It does not knowingly collect any information from children.
+    </p>
+
+    <h2>Changes to this policy</h2>
+    <p>
+      We may update this Privacy Policy from time to time. Material changes will be reflected
+      by updating the effective date above and posting the revised policy at this URL.
+    </p>
+
+    <h2>Contact</h2>
+    <p>
+      If you have questions about this Privacy Policy, contact:
+      <a href="mailto:scooter.seh@gmail.com">scooter.seh@gmail.com</a>.
+    </p>
+
+    <footer>
+      Controller Viewer is an independent, open-source utility and is not affiliated with or
+      endorsed by the Falcon Player project.
+    </footer>
+  </main>
+</body>
+</html>
